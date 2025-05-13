@@ -9,12 +9,10 @@ from datetime import timedelta
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-# Configure the database (SQLite for simplicity)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sudoku.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# JWT Configuration
-app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Change this in production
+app.config['JWT_SECRET_KEY'] = 'super-secret-key'  
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_TOKEN_LOCATION'] = ['headers']
 app.config['JWT_HEADER_NAME'] = 'Authorization'
@@ -32,13 +30,11 @@ def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(id=identity).one_or_none()
 
-# User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
 
-# Define the Game model
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -46,18 +42,15 @@ class Game(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
     is_completed = db.Column(db.Boolean, default=False)
-    elapsed_time = db.Column(db.Integer, default=0)  # Store time in seconds
+    elapsed_time = db.Column(db.Integer, default=0)  
 
-# Initialize the database
+
 with app.app_context():
     db.create_all()
 
-# Register route
 @app.route('/register', methods=['POST'])
 def register():
     data = request.json
-    
-    # Check if username already exists
     if User.query.filter_by(username=data['username']).first():
         return jsonify({"message": "Username already exists"}), 400
         
@@ -67,7 +60,6 @@ def register():
     db.session.commit()
     return jsonify({"message": "User registered successfully"}), 201
 
-# Login route
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
@@ -85,11 +77,10 @@ def save_game():
         current_user_id = get_jwt_identity()
         board_state = data.get('board_state')
         is_completed = data.get('is_completed', False)
-        game_id = data.get('game_id')  # Optional game_id for updating existing game
-        elapsed_time = data.get('elapsed_time', 0)  # Get elapsed time from request
+        game_id = data.get('game_id') 
+        elapsed_time = data.get('elapsed_time', 0) 
 
         if game_id:
-            # Update existing game
             game = Game.query.filter_by(id=game_id, user_id=current_user_id).first()
             if game:
                 game.board_state = board_state
@@ -102,7 +93,6 @@ def save_game():
                 }), 200
             return jsonify({"message": "Game not found"}), 404
         else:
-            # Create new game
             new_game = Game(
                 user_id=current_user_id,
                 board_state=board_state,
